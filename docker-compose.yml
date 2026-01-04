@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ticketing-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ticketing_user
+      POSTGRES_PASSWORD: ticketing_pass
+      POSTGRES_DB: ticketing_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ticketing-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ticketing-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@ticketing.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - postgres
+    networks:
+      - ticketing-network
+
+volumes:
+  postgres_data:
+
+networks:
+  ticketing-network:
+    driver: bridge

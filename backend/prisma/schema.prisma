@@ -1,0 +1,189 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MODEL
+// ============================================
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // hashed
+  firstName String
+  lastName  String
+  phone     String?
+  role      UserRole @default(USER)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  orders    Order[]
+  
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  OPERATOR
+}
+
+// ============================================
+// EVENT MODEL
+// ============================================
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  imageUrl    String?
+  venue       String
+  address     String
+  date        DateTime
+  
+  totalTickets     Int
+  availableTickets Int
+  price            Decimal  @db.Decimal(10, 2)
+  
+  status    EventStatus @default(DRAFT)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  tickets   Ticket[]
+  orders    Order[]
+  
+  @@map("events")
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+// ============================================
+// ORDER MODEL (Shopping Cart + Payment)
+// ============================================
+model Order {
+  id        String      @id @default(cuid())
+  orderNumber String    @unique @default(cuid())
+  
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  
+  eventId   String
+  event     Event       @relation(fields: [eventId], references: [id])
+  
+  quantity  Int
+  totalAmount Decimal   @db.Decimal(10, 2)
+  
+  status    OrderStatus @default(PENDING)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime?  // For pending orders
+  
+  // Relations
+  payment   Payment?
+  tickets   Ticket[]
+  
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING      // User created order, not paid yet
+  PAID         // Payment confirmed
+  CANCELLED    // User cancelled or payment failed
+  EXPIRED      // Payment timeout
+}
+
+// ============================================
+// PAYMENT MODEL (MercadoPago Integration)
+// ============================================
+model Payment {
+  id        String   @id @default(cuid())
+  
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  
+  // MercadoPago data
+  mpPaymentId     String?  @unique  // MercadoPago's payment ID
+  mpPreferenceId  String?  @unique  // For checkout links
+  mpStatus        String?           // MercadoPago status
+  
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String   @default("ARS")
+  
+  paymentMethod   String?
+  paymentType     String?
+  
+  status          PaymentStatus @default(PENDING)
+  
+  // Webhook tracking
+  webhookReceived Boolean   @default(false)
+  webhookAttempts Int       @default(0)
+  lastWebhookAt   DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  REFUNDED
+}
+
+// ============================================
+// TICKET MODEL (Generated after payment)
+// ============================================
+model Ticket {
+  id          String   @id @default(cuid())
+  ticketNumber String  @unique @default(cuid())
+  
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id])
+  
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id])
+  
+  // QR Code data
+  qrCode      String   @unique  // The actual QR string (signed)
+  qrNonce     String   @unique  // One-time use token for replay prevention
+  
+  // Access control
+  status      TicketStatus @default(PENDING)
+  scannedAt   DateTime?
+  scannedBy   String?      // Operator ID who scanned it
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("tickets")
+}
+
+enum TicketStatus {
+  PENDING      // Order paid, ticket generated but not active yet
+  ACTIVE       // Ready to be scanned
+  SCANNED      // Already used at entrance
+  CANCELLED    // Order was cancelled/refunded
+  EXPIRED      // Event date passed
+}
