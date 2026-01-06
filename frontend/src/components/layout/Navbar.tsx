@@ -36,6 +36,9 @@ export default function Navbar() {
               <Link href="/orders">
                 <Button variant="ghost">My Orders</Button>
               </Link>
+              <Link href="/scanner">
+                <Button variant="ghost">Scanner</Button>
+              </Link>
               <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 rounded-lg">
                 <User className="h-4 w-4 text-purple-600" />
                 <span className="text-sm font-medium">{user?.firstName}</span>
