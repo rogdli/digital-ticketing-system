@@ -19,7 +19,7 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 export class OrdersController {
   constructor(private ordersService: OrdersService) {}
 
-  // Create a new order (initiate purchase)
+  // create a new order (initiate purchase)
   @Post()
   createOrder(@Body() dto: CreateOrderDto, @GetUser('id') userId: string) {
     return this.ordersService.create(userId, dto);

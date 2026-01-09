@@ -142,7 +142,7 @@ export class TicketsService {
       }
 
       /*
-      // 5. Check event date (optional: prevent scanning too early)
+      // 5. Check event date (optional to prevent scanning too early)..........
       const eventDate = new Date(ticket.event.date);
       const now = new Date();
       const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60);
